@@ -1,0 +1,63 @@
+<!doctype html>
+<div style="display:flex;gap:8px;align-items:center">
+<select id="tournamentSelect" style="padding:8px;border-radius:6px;background:#0b0b0b;color:var(--muted);border:1px solid rgba(255,255,255,0.03)"></select>
+<select id="classSelect" style="padding:8px;border-radius:6px;background:#0b0b0b;color:var(--muted);border:1px solid rgba(255,255,255,0.03)">
+<option value="">All Classes</option>
+<option>Beginners</option><option>D</option><option>C-</option><option>C</option><option>C+</option>
+</select>
+</div>
+</div>
+
+
+<div id="rankingList" class="card">Loading rankings…</div>
+</main>
+
+
+<script type="module" src="firebase.js"></script>
+<script type="module">
+import { db } from './firebase.js';
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+
+const tournamentSelect = document.getElementById('tournamentSelect');
+const classSelect = document.getElementById('classSelect');
+const rankingList = document.getElementById('rankingList');
+
+
+let tournaments = {}, players = {};
+
+
+function buildTournamentOptions(){
+tournamentSelect.innerHTML = '<option value="">Select tournament</option>' + Object.entries(tournaments).map(([id,t])=>`<option value="${id}">${t.name} • ${t.date||'TBA'}</option>`).join('');
+}
+
+
+function showRankings(){
+const tid = tournamentSelect.value;
+const cls = classSelect.value;
+if(!tid) { rankingList.innerHTML = '<i>Select a tournament</i>'; return; }
+const t = tournaments[tid];
+let list = [];
+// gather from players
+list = Object.entries(players).map(([id,p])=>{
+const entry = (p.tournaments && p.tournaments[tid]) ? p.tournaments[tid] : null;
+return entry ? ({ id, name: p.name, points: entry.points||0, wins: entry.wins||0, losses: entry.losses||0, class: p.class, club: p.club }) : null;
+}).filter(Boolean);
+if(cls) list = list.filter(x=> x.class === cls);
+list.sort((a,b) => (b.points||0) - (a.points||0) || (b.wins||0)-(a.wins||0));
+if(!list.length) rankingList.innerHTML = '<i>No ranking data found for this selection</i>';
+else{
+rankingList.innerHTML = `<table style="width:100%;border-collapse:collapse"><thead><tr style="text-align:left;color:var(--muted)"><th>#</th><th>Player</th><th>Club</th><th>Class</th><th>Points</th><th>W-L</th></tr></thead><tbody>` +
+list.map((p,i)=>`<tr style="border-top:1px solid rgba(255,255,255,0.03)"><td style="padding:8px">${i+1}</td><td style="padding:8px;color:var(--accent)">${p.name}</td><td style="padding:8px">${p.club||''}</td><td style="padding:8px">${p.class||''}</td><td style="padding:8px">${p.points||0}</td><td style="padding:8px">${(p.wins||0)}-${(p.losses||0)}</td></tr>`).join('') +
+`</tbody></table>`;
+}
+}
+
+
+onValue(ref(db,'tournaments'), snap => { tournaments = snap.val() || {}; buildTournamentOptions(); });
+onValue(ref(db,'players'), snap => { players = snap.val() || {}; showRankings(); });
+tournamentSelect.onchange = showRankings;
+classSelect.onchange = showRankings;
+</script>
+</body>
+</html>
