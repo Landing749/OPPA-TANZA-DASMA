@@ -1,0 +1,57 @@
+<!doctype html>
+<header class="header">
+<img src="/assets/logo.png" class="logo" alt="OPPA logo" />
+<nav class="nav">
+<a href="index.html">Home</a>
+<a href="tournaments.html">Tournaments</a>
+<a href="rankings.html">Rankings</a>
+<a href="players.html">Players</a>
+<a href="merch.html">Merch</a>
+<a href="branches.html">Branches</a>
+<a href="rules.html">Rules</a>
+</nav>
+</header>
+
+
+<main class="container">
+<h1 class="h1">Players</h1>
+<div class="card">
+<input id="searchPlayer" placeholder="Search player name or club" style="width:100%; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); background:#0b0b0b; color:var(--muted)" />
+</div>
+<div id="playersList" class="card">Loading players…</div>
+</main>
+
+
+<div id="playerModal" style="display:none"></div>
+<script type="module" src="firebase.js"></script>
+<script type="module">
+import { db } from './firebase.js';
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+
+const playersList = document.getElementById('playersList');
+const search = document.getElementById('searchPlayer');
+const playerModal = document.getElementById('playerModal');
+let players = {};
+
+
+function renderPlayers(filter=''){
+const arr = Object.entries(players).sort((a,b)=> (a[1].name||'').localeCompare(b[1].name||''));
+const filtered = arr.filter(([id,p])=> (p.name||'').toLowerCase().includes(filter) || (p.club||'').toLowerCase().includes(filter));
+if(!filtered.length) { playersList.innerHTML = '<i>No players match</i>'; return; }
+playersList.innerHTML = '<div class="grid">' + filtered.map(([id,p])=>`<div class="card"><div style="display:flex;justify-content:space-between"><strong>${p.name}</strong><span>${p.club||''}</span></div><div style="margin-top:6px;color:var(--muted);font-size:13px">${p.class||''}</div><div style="margin-top:8px"><button class="branch-btn" data-id="${id}">View</button></div></div>`).join('') + '</div>';
+document.querySelectorAll('[data-id]').forEach(b=> b.onclick = ()=> openProfile(b.getAttribute('data-id')));
+}
+
+
+function openProfile(id){
+const p = players[id];
+playerModal.innerHTML = `<div class="modal-backdrop" onclick="document.getElementById('playerModal').innerHTML=''"><div class="modal" onclick="event.stopPropagation()"><h2 class="h2">${p.name}</h2><p>Club: ${p.club||'—'}</p><p>Class: ${p.class||'—'}</p><h3 class="h3">Tournament history</h3><ul>${p.tournaments? Object.entries(p.tournaments).map(([tn,d])=>`<li>${tn}: ${d.points||0} pts, ${d.wins||0}W/${d.losses||0}L</li>`).join(''):'<li>No history</li>'}</ul><div style="text-align:right"><button class="branch-btn" onclick="document.getElementById('playerModal').innerHTML='';">Close</button></div></div></div>`;
+}
+
+
+onValue(ref(db,'players'), snap => { players = snap.val() || {}; renderPlayers(search.value.trim().toLowerCase()); });
+search.addEventListener('input', ()=> renderPlayers(search.value.trim().toLowerCase()));
+</script>
+</body>
+</html>
