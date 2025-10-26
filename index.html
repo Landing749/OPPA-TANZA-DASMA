@@ -1,0 +1,60 @@
+<!doctype html>
+<header class="header">
+<img src="/assets/logo.png" class="logo" alt="OPPA logo" />
+<nav class="nav">
+<a href="index.html">Home</a>
+<a href="tournaments.html">Tournaments</a>
+<a href="rankings.html">Rankings</a>
+<a href="players.html">Players</a>
+<a href="merch.html">Merch</a>
+<a href="branches.html">Branches</a>
+<a href="rules.html">Rules</a>
+</nav>
+</header>
+
+
+<main class="container">
+<div class="card">
+<h1 class="h1">Welcome to OPPA — One Ping Pong Academy</h1>
+<p>Official hub for players, tournaments, rankings and merch. Live updates powered by Firebase RTDB.</p>
+</div>
+
+
+<div id="highlights" class="card">
+<h2 class="h2">Upcoming Tournaments</h2>
+<div id="upcomingList">Loading tournaments…</div>
+</div>
+
+
+<div class="card">
+<h2 class="h2">Announcements</h2>
+<div id="news">No news yet — admin can post updates from the dashboard.</div>
+</div>
+</main>
+
+
+<script type="module" src="firebase.js"></script>
+<script type="module">
+import { db } from './firebase.js';
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+
+const upcomingList = document.getElementById('upcomingList');
+const news = document.getElementById('news');
+
+
+onValue(ref(db, 'tournaments'), snap => {
+const data = snap.val() || {};
+const keys = Object.keys(data).sort((a,b)=> (data[a].date||'').localeCompare(data[b].date||''));
+if(!keys.length) upcomingList.innerHTML = '<i>No tournaments yet</i>';
+else upcomingList.innerHTML = keys.map(k => {
+const t = data[k];
+return `<div class="tournament-card"><strong>${t.name}</strong> — <span class="tournament-meta">${t.date || 'TBA'}</span><div>${t.location? `<small>${t.location}</small>`: ''}</div></div>`;
+}).join('');
+});
+
+
+onValue(ref(db, 'news'), snap => { news.innerHTML = snap.val() || '<i>No news yet</i>'; });
+</script>
+</body>
+</html>
