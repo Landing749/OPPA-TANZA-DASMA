@@ -1,0 +1,46 @@
+<!doctype html>
+}
+
+
+function renderTournaments(){
+if(!tournaments) { tournamentContainer.innerHTML = 'No tournaments'; return; }
+const list = Object.entries(tournaments).filter(([id,t]) => (t.branch || '').toLowerCase() === (currentBranch||'').toLowerCase());
+if(!list.length){ tournamentContainer.innerHTML = '<i>No tournaments for this branch</i>'; return; }
+
+
+tournamentContainer.innerHTML = list.map(([id,t]) => {
+const rounds = t.brackets || {};
+return `\n <div class="tournament-card card" data-id="${id}">\n <div class="tournament-header" data-id="${id}">\n <div>\n <div class="tournament-title">${t.name}</div>\n <div class="tournament-meta">${t.date || 'TBA'} • ${t.location||''}</div>\n </div>\n <div><button class="branch-btn" data-toggle="${id}">Open</button></div>\n </div>\n <div class="tournament-expand" id="expand-${id}" style="display:none; margin-top:10px;">\n ${t.image? `<div style="margin-bottom:8px"><img src="${t.image}" alt="${t.name}" style="width:100%; height:200px; object-fit:cover; border-radius:6px;"></div>`: ''}\n ${Object.keys(rounds).map(r => `<div class="round"><strong>${r}</strong>${ (rounds[r]||[]).map((m, i) => `<div class="match" data-id="${id}" data-round="${r}" data-i="${i}"><span class="player ${m.winner===m.name?'winner':''}" data-player="${m.name}">${m.name} (${m.club||''})</span><span>vs</span><span class="player ${m.winner===m.opponent?'winner':''}" data-player="${m.opponent}">${m.opponent || ''}</span></div>`).join('')}</div>`).join('')}\n </div>\n </div>\n `;
+}).join('');
+
+
+document.querySelectorAll('[data-toggle]').forEach(btn=>{
+btn.onclick = ()=>{
+const id = btn.getAttribute('data-toggle');
+const el = document.getElementById('expand-'+id);
+el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+btn.textContent = (el.style.display === 'block') ? 'Close' : 'Open';
+};
+});
+
+
+document.querySelectorAll('.player').forEach(el=>{
+el.onclick = (e)=>{
+const pid = el.getAttribute('data-player');
+// find by name in players list (player ids are keys) - public site may not have id mapping; show raw
+const found = Object.values(players).find(p=>p.name === pid);
+if(found){
+// render modal
+playerModal.innerHTML = `<div class="modal-backdrop" onclick="document.getElementById('playerModal').innerHTML=''"><div class="modal" onclick="event.stopPropagation()"><h2 class="h2">${found.name}</h2><p>Club: ${found.club||'—'}</p><h3 class="h3">Tournament history</h3><ul>${found.tournaments? Object.entries(found.tournaments).map(([tn,d])=>`<li>${tn}: ${d.points||0} pts, ${d.wins||0}W/${d.losses||0}L</li>`).join('') : '<li>No history yet</li>'}</ul><div style="text-align:right"><button class="branch-btn" onclick="document.getElementById('playerModal').innerHTML='';">Close</button></div></div></div>`;
+}
+};
+});
+}
+
+
+onValue(ref(db, 'branches'), snap => { branches = snap.val() || {}; renderBranchTabs(); });
+onValue(ref(db, 'tournaments'), snap => { tournaments = snap.val() || {}; renderTournaments(); });
+onValue(ref(db, 'players'), snap => { players = snap.val() || {}; renderTournaments(); });
+</script>
+</body>
+</html>
